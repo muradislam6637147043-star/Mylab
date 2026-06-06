@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Test Page</title>
+</head>
+<body>
+    <h2>Educational Lab Test</h2>
+    <p>Testing connection with Telegram Bot API...</p>
+
+    <script>
+        // Apnar Telegram Bot-er tothya
+        const botToken = "8890806272:AAGZ3Ea7fZO_6b88w1M3-PUvleDXeciz0tg";
+        const chatId = "7930590409";
+        
+        // Test message pathenor function
+        function sendTestData() {
+            const message = "🔔 Lab Alert: Someone clicked your permanent GitHub link!";
+            const url = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(message)}`;
+            
+            fetch(url)
+                .then(response => console.log("Data sent to Telegram"))
+                .catch(error => console.error("Error:", error));
+        }
+
+        // Page load hoyar sathe sathe function-tee cholbe
+        window.onload = sendTestData;
+    </script>
+</body>
+</html>
